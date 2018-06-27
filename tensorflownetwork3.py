@@ -11,10 +11,10 @@ from tflearn.layers.core import input_data, dropout, fully_connected
 from tflearn.activations import softmax
 from tflearn.layers.estimator import regression
 
-
 HAY_DIR = 'Subset/YesHayResized'
 NOTHAY_DIR = 'Subset/NotHayResized'
-IMG_SIZE = 128
+IMG_SIZE = 256
+BATCH_SIZE = 50
 LR = 1e-6
 MODEL_NAME = 'hay-convnet'
 epochs = 250
@@ -50,10 +50,10 @@ def create_train_data():
     return training_data,testing_data
 
 # If dataset is not created:
-#train_data,test_data = create_train_data()
+train_data,test_data = create_train_data()
 # If you have already created the dataset:
-train_data = np.load('train_data.npy')
-test_data = np.load('test_data.npy')
+#train_data = np.load('train_data.npy')
+#test_data = np.load('test_data.npy')
 
 X_train = np.array([i[0] for i in train_data]).reshape(-1, IMG_SIZE, IMG_SIZE, 3)
 y_train = [i[1] for i in train_data]
@@ -63,34 +63,35 @@ y_test = [i[1] for i in test_data]
 def build_network():
     tf.reset_default_graph()
     convnet = input_data(shape=[IMG_SIZE, IMG_SIZE, 3], name='input')
-    convnet = conv_2d(convnet, 32, 3, activation='relu')
+    convnet = conv_2d(convnet, 32, 3, activation='relu',regularizer='L2')
     convnet = max_pool_2d(convnet, 2)
-    convnet = conv_2d(convnet, 64, 3, activation='relu')
-    convnet = max_pool_2d(convnet, 2)
-
-    convnet = conv_2d(convnet, 128, 3, activation='relu')
-    convnet = conv_2d(convnet, 64, 1, activation='relu')
-    convnet = conv_2d(convnet, 128, 3, activation='relu')
+    convnet = conv_2d(convnet, 64, 3, activation='relu',regularizer='L2')
     convnet = max_pool_2d(convnet, 2)
 
-    convnet = conv_2d(convnet, 256, 3, activation='relu')
-    convnet = conv_2d(convnet, 128, 1, activation='relu')
-    convnet = conv_2d(convnet, 256, 3, activation='relu')
+    convnet = conv_2d(convnet, 128, 3, activation='relu',regularizer='L2')
+    convnet = conv_2d(convnet, 64, 1, activation='relu',regularizer='L2')
+    convnet = conv_2d(convnet, 128, 3, activation='relu',regularizer='L2')
     convnet = max_pool_2d(convnet, 2)
 
-    convnet = conv_2d(convnet,512,3, activation='relu')
-    convnet = conv_2d(convnet,256,1, activation='relu')
-    convnet = conv_2d(convnet,512,3, activation='relu')
-    convnet = conv_2d(convnet,256,1, activation='relu')
-    convnet = conv_2d(convnet,512,3, activation='relu')
+    convnet = conv_2d(convnet, 256, 3, activation='relu',regularizer='L2')
+    convnet = conv_2d(convnet, 128, 1, activation='relu',regularizer='L2')
+    convnet = conv_2d(convnet, 256, 3, activation='relu',regularizer='L2')
     convnet = max_pool_2d(convnet, 2)
 
-    convnet = conv_2d(convnet,1024,3, activation='relu')
-    convnet = conv_2d(convnet,512,1, activation='relu')
-    convnet = conv_2d(convnet,1024,3, activation='relu')
-    convnet = conv_2d(convnet,512,1, activation='relu')
-    convnet = conv_2d(convnet,1024,3, activation='relu')
+    convnet = conv_2d(convnet,512,3, activation='relu',regularizer='L2')
+    convnet = conv_2d(convnet,256,1, activation='relu',regularizer='L2')
+    convnet = conv_2d(convnet,512,3, activation='relu',regularizer='L2')
+    convnet = conv_2d(convnet,256,1, activation='relu',regularizer='L2')
+    convnet = conv_2d(convnet,512,3, activation='relu',regularizer='L2')
+    convnet = max_pool_2d(convnet, 2)
 
+    convnet = conv_2d(convnet,1024,3, activation='relu',regularizer='L2')
+    convnet = conv_2d(convnet,512,1, activation='relu',regularizer='L2')
+    convnet = conv_2d(convnet,1024,3, activation='relu',regularizer='L2')
+    convnet = conv_2d(convnet,512,1, activation='relu',regularizer='L2')
+    convnet = conv_2d(convnet,1024,3, activation='relu',regularizer='L2')
+
+    convnet = dropout(convnet,0.7)
     convnet = fully_connected(convnet, 2, activation='softmax')
     convnet = regression(convnet, optimizer='adam', learning_rate=LR, loss='categorical_crossentropy', name='targets')
 
@@ -98,8 +99,8 @@ def build_network():
 
 model = tflearn.DNN(build_network(), tensorboard_dir='log', tensorboard_verbose=0)
 model.fit({'input': X_train}, {'targets': y_train}, n_epoch=epochs, 
-          validation_set=({'input': X_test}, {'targets': y_test}), 
-          snapshot_step=500, show_metric=True, run_id=MODEL_NAME)
+          validation_set=({'input': X_test}, {'targets': y_test}),
+          snapshot_step=500, show_metric=True, batch_size=BATCH_SIZE, run_id=MODEL_NAME)
 
 if not os.path.isdir(save_dir):
     os.makedirs(save_dir)
